@@ -1,0 +1,8 @@
+{
+  "name": "Stock",
+  "slug": "Stock",
+  "version": "1.0.0",
+  "enabled": true,
+  "price": 5000,
+  "dependencies": []
+}

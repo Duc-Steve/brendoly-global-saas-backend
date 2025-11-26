@@ -1,0 +1,60 @@
+{
+  "platform": {
+    "modules": {
+      "tenants": {
+        "actions": [
+          { "action": "view", "key": "tenants.view", "label": "Voir tenants" },
+          { "action": "create", "key": "tenants.create", "label": "Créer tenant" },
+          { "action": "edit", "key": "tenants.edit", "label": "Modifier tenant" },
+          { "action": "delete", "key": "tenants.delete", "label": "Supprimer tenant" },
+          { "action": "suspend", "key": "tenants.suspend", "label": "Suspendre tenant" }
+        ]
+      },
+      "billing": {
+        "actions": [
+          { "action": "view", "key": "billing.view", "label": "Voir factures" },
+          { "action": "edit", "key": "billing.edit", "label": "Modifier factures" },
+          { "action": "refund", "key": "billing.refund", "label": "Rembourser" }
+        ]
+      },
+      "modules": {
+        "actions": [
+          { "action": "view", "key": "modules.view", "label": "Voir modules" },
+          { "action": "activate", "key": "modules.activate", "label": "Activer module" }
+        ]
+      },
+      "staff": {
+        "actions": [
+          { "action": "view", "key": "staff.view", "label": "Voir staff" },
+          { "action": "manage", "key": "staff.manage", "label": "Gérer staff" }
+        ]
+      }
+    }
+  },
+
+  "tenant": {
+    "modules": {
+      "stock": {
+        "actions": [
+          { "action": "view_item", "key": "stock.view_item", "label": "Voir articles" },
+          { "action": "create_item", "key": "stock.create_item", "label": "Créer article" },
+          { "action": "edit_item", "key": "stock.edit_item", "label": "Modifier article" },
+          { "action": "delete_item", "key": "stock.delete_item", "label": "Supprimer article" },
+          { "action": "validate_stock", "key": "stock.validate_stock", "label": "Valider inventaire" }
+        ]
+      },
+      "users": {
+        "actions": [
+          { "action": "view", "key": "users.view", "label": "Voir employés" },
+          { "action": "invite", "key": "users.invite", "label": "Inviter utilisateur" },
+          { "action": "manage_roles", "key": "users.manage_roles", "label": "Gérer les rôles" }
+        ]
+      },
+      "settings": {
+        "actions": [
+          { "action": "update_company", "key": "settings.update_company", "label": "Modifier entreprise" }
+        ]
+      }
+    }
+  }
+}
