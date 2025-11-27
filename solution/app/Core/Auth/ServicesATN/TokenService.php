@@ -2,62 +2,105 @@
 
 namespace App\Core\Auth\ServicesATN;
 
+use App\Core\Auth\ModelsATN\RefreshTokens;
 use App\Core\Auth\ModelsATN\UserIdentify;
-use App\Core\Auth\TraitsATN\TokenTrait;
+use Illuminate\Support\Str;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Exception;
 
-/**
- * Service de gestion des tokens d'authentification
- * Crée, rafraîchit et révoque les tokens (access et refresh)
- */
 class TokenService
 {
-    use TokenTrait; // Fournit createAccessToken(), createRefreshToken(), revokeAllTokens(), revokeCurrentToken()
-
     /**
-     * Crée les tokens d'authentification pour un utilisateur
-     * Retourne access_token, refresh_token, type et durée de validité
+     * Crée les tokens JWT + refresh token pour un utilisateur
      */
     public function createAuthTokens(UserIdentify $user): array
     {
+        $accessToken = $this->createAccessToken($user);
+        $refreshToken = $this->createRefreshToken($user);
+
         return [
-            'access_token' => $this->createAccessToken($user),   // Token d'accès court terme
-            'refresh_token' => $this->createRefreshToken($user), // Token long terme pour renouveler access_token
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken['token'],
             'token_type' => 'Bearer',
-            'expires_in' => 60 * 24 * 7, // Durée en minutes (7 jours)
+            // access_token expire dans JWT config (ex: 15 min, 1h, etc.)
+            'expires_in' => config('jwt.ttl'), // en minutes
         ];
     }
 
     /**
-     * Rafraîchit le token d'accès
-     * Supprime l'ancien refresh_token puis en génère de nouveaux
+     * Génère un JWT (access_token)
      */
-    public function refreshToken(UserIdentify $user): array
+    public function createAccessToken(UserIdentify $user): string
     {
-        // Révoque tous les anciens refresh_tokens pour sécurité
-        $user->tokens()
-            ->where('name', 'refresh_token')
-            ->delete();
+        return JWTAuth::fromUser($user);
+    }
 
-        // Génère de nouveaux tokens
+    /**
+     * Crée un refresh token unique, stocké en base
+     */
+    public function createRefreshToken(UserIdentify $user): array
+    {
+        $token = Str::uuid()->toString();
+        $expiresAt = now()->addDays(30);
+
+        $user->refreshTokens()->create([
+            'id_refresh_token' => (string) Str::uuid(),
+            'token' => $token,
+            'expires_at' => $expiresAt, // CORRECTION ICI
+        ]);
+
+        return [
+            'token' => $token,
+            'expires_at' => $expiresAt,
+        ];
+    }
+
+    /**
+     * Rafraîchit le token d’accès à partir d’un refresh_token valide
+     */
+    public function refreshToken(string $refreshToken): array
+    {
+        $record = RefreshTokens::where('token', $refreshToken)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $record) {
+            throw new Exception('Refresh token invalide ou expiré');
+        }
+
+        $user = $record->user;
+
+        // 1. Supprimer l'ancien refresh token
+        $record->delete();
+
+        // 2. Créer un nouveau refresh token + access token
         return $this->createAuthTokens($user);
     }
 
     /**
-     * Déconnexion globale
-     * Révoque tous les tokens de l'utilisateur
+     * Déconnexion globale → supprime tous les refresh_tokens
      */
     public function logout(UserIdentify $user): void
     {
-        $this->revokeAllTokens($user);
+        $user->refreshTokens()->delete();
+
+        // Invalide le JWT actuel (optionnel)
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+        } catch (Exception $e) {
+            // ignore erreur si pas de JWT actif
+        }
     }
 
     /**
-     * Déconnexion du device courant
-     * Révoque uniquement le token utilisé pour la session en cours
+     * Déconnexion du device courant → supprime seulement un refresh_token
      */
-    public function logoutCurrentDevice(UserIdentify $user): void
+    public function logoutCurrentDevice(string $refreshToken): void
     {
-        $this->revokeCurrentToken($user);
+        RefreshTokens::where('token', $refreshToken)->delete();
+
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+        } catch (Exception $e) {}
     }
 }

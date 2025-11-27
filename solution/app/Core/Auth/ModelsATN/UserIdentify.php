@@ -9,15 +9,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Crypt;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 /**
  * Modèle User avec cryptage des données sensibles
  * @package App\Core\Auth\Models
  */
-class UserIdentify extends Authenticatable
+class UserIdentify extends Authenticatable implements JWTSubject
 {
     // Ajout des traits pour gérer les tokens API, les notifications et les factories
-    use HasApiTokens, HasFactory, Notifiable, HasUuids;
+    use HasFactory, Notifiable, HasUuids;
 
     // Clé primaire personnalisée
     protected $primaryKey = 'id_user_identity';
@@ -90,5 +91,20 @@ class UserIdentify extends Authenticatable
     public function tenant()
     {
         return $this->belongsTo(Tenant::class, 'tenant_id', 'id_tenant');
+    }
+
+    public function getJWTIdentifier()
+    {
+       return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+
+    public function refreshTokens()
+    {
+        return $this->hasMany(RefreshTokens::class, 'user_identity_id');
     }
 }

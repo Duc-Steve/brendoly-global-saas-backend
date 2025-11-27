@@ -33,8 +33,12 @@ class RegisterController extends Controller
             // Crée l'utilisateur dans la base de données
             $this->authService->register($validated);
 
-            // Retourne la réponse avec code 201 (created)
-            return $this->createdResponse('Inscription réussie');
+            // Retourne la réponse avec code 201 (created) // Retourne uniquement un message de succès
+            return $this->successResponse(
+                null, 
+                'Inscription réussie. Vous pouvez maintenant vous connecter.', 
+                201
+            );
 
         } catch (Exception $e) {
             // Erreur serveur lors de l'inscription

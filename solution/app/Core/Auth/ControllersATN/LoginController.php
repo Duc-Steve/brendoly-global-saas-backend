@@ -8,19 +8,22 @@ use App\Core\Auth\ServicesATN\AuthService;
 use App\Core\Auth\ServicesATN\TokenService;
 use App\Core\Auth\TraitsATN\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cookie;
 use Exception;
 
 /**
  * Controller pour la connexion standard des utilisateurs
  * Gère la vérification des identifiants et la génération des tokens
+ * @var App\Core\Auth\ModelsATN\UserIdentify $user
  */
+
 class LoginController extends Controller
 {
-    use ApiResponseTrait; // Fournit successResponse() et errorResponse() pour standardiser les réponses API
+    use ApiResponseTrait;
 
     public function __construct(
-        private AuthService $authService, // Service d'authentification
-        private TokenService $tokenService // Service pour gérer les tokens JWT ou API
+        private AuthService $authService,
+        private TokenService $tokenService
     ) {}
 
     /**
@@ -29,62 +32,36 @@ class LoginController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        try {
-            $validated = $request->validated(); // Récupère les données validées (credential + password)
-            
-            // Vérifie les identifiants et retourne l'utilisateur si correct
-            $user = $this->authService->login(
-                $validated['credential'], 
-                $validated['password']
-            );
+            $validated = $request->validated(); // 'credential' + 'password'
 
-            if (!$user) {
-                // Identifiants incorrects : retourne une erreur 401
+            $credential = $validated['credential'];
+            $password = $validated['password'];
+
+            // Vérifie les identifiants et retourne l'utilisateur si correct
+            $user = $this->authService->login($credential, $password);
+
+            if (! $user) {
                 return $this->errorResponse('Identifiants incorrects', 401);
             }
 
             // Génère les tokens d'authentification (access + refresh)
             $tokens = $this->tokenService->createAuthTokens($user);
 
-            // Crée cookie HttpOnly pour le token d'accès
-            setcookie(
-                'access_token',
-                $tokens['access_token'],
-                [
-                    'expires' => time() + ($tokens['expires_in'] * 60),
-                    'path' => '/',
-                    'secure' => true,       // HTTPS obligatoire
-                    'httponly' => true,     // JS ne peut pas lire
-                    'samesite' => 'Strict', // Protège contre CSRF
-                ]
-            );
-
-            // Refresh token dans un cookie séparé
-            setcookie(
-                'refresh_token',
-                $tokens['refresh_token'],
-                [
-                    'expires' => time() + (30*24*60*60), // 30 jours
-                    'path' => '/',
-                    'secure' => true,
-                    'httponly' => true,
-                    'samesite' => 'Strict',
-                ]
-            );
-
-            // Récupère le profil de l'utilisateur
+            // Récupère le profil utilisateur (user + tenant)
             $profile = $this->authService->getProfile($user);
 
-            // Retour JSON **sans exposer le token**
-            return $this->successResponse([
+            // Réponse de base (commune web/mobile)
+            $payload = [
                 'user' => $profile['user'],
                 'tenant' => $profile['tenant'],
                 'expires_in' => $tokens['expires_in'],
-            ], 'Connexion réussie');
+                'access_token' => $tokens['access_token'],
+                'refresh_token' => $tokens['refresh_token'],
+            ];
 
-        } catch (Exception $e) {
-            // Erreur serveur lors de la connexion
-            return $this->errorResponse('Erreur lors de la connexion', 500);
-        }
+            // successResponse construit un JsonResponse standardisé (status 200)
+            // Les cookies ont déjà été queued via Cookie::queue()
+            return $this->successResponse($payload, 'Connexion réussie');
+
     }
 }

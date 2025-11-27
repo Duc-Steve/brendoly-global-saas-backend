@@ -3,22 +3,28 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Schema;     // importe Schema
+use App\Core\Utils\ModuleLoader; // importe ModuleLoader
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Enregistre les services de l'application.
      */
     public function register(): void
     {
-        //
+        // Ajoute ici les services à enregistrer si besoin
     }
 
     /**
-     * Bootstrap any application services.
+     * Démarre les services de l'application.
      */
     public function boot(): void
     {
-        //
+        // Fixe la longueur par défaut des chaînes pour éviter les erreurs MySQL
+        Schema::defaultStringLength(191);
+
+        // Charge tous les modules au démarrage
+        ModuleLoader::loadModules();
     }
 }
